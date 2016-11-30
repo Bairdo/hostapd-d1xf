@@ -1,3 +1,6 @@
+This is used with the [TODO project] to notify the OpenFlow controller when a user has Successfully authenticated, Logged off, or are not responding to authenticationn attempts
+
+
 wpa_supplicant and hostapd
 --------------------------
 
