@@ -241,14 +241,27 @@ SM_STATE(AUTH_PAE, DISCONNECTED)
 
 			// todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
 			char * strs = malloc(1000);
-			sprintf(strs, "http://10.0.11.2:8080/v1.0/authenticate/mac=" MACSTR "&user=%s", MAC2STR(sm->addr), sm->identity);
+			sprintf(strs, "http://10.0.11.2:8080/authenticate");
+	
 			curl_easy_setopt(curl, CURLOPT_URL, strs);
 			/* Now specify the POST data */ 
 
-
+			struct curl_slist * headers = NULL;
+			headers = curl_slist_append(headers, "Content-Type: application/json");
+		
+			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);		
 			curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+
+			char * json = calloc(1000, sizeof(char));
+			// lets hope the username isnt massive
+			sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\" }", MAC2STR(sm->addr), (char*)sm->identity);
+			wpa_printf(MSG_DEBUG, "JSON: %s", (char*)json);
+			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
+
 			/* Perform the request, res will get the return code */ 
 			res = curl_easy_perform(curl);
+			curl_slist_free_all(headers);
+
 			/* Check for errors */ 
 			if(res != CURLE_OK)
 				wpa_printf(MSG_ERROR, "curl_easy_perform() failed: %s\n",
@@ -256,6 +269,7 @@ SM_STATE(AUTH_PAE, DISCONNECTED)
 			else{
 				wpa_printf(MSG_DEBUG, "curl post successful for logoff");
 			}
+			free(json);
 			free(strs);
 			/* always cleanup */
 			curl_easy_cleanup(curl);

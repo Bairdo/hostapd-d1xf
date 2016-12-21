@@ -335,13 +335,28 @@ SM_STATE(EAP, IDLE)
 
 			// todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
 			char * strs = malloc(1000);
-			sprintf(strs, "http://10.0.11.2:8080/v1.0/idle/retrans=%d&mac=" MACSTR "&user=%s", sm->retransCount, MAC2STR(sm->peer_addr), sm->identity);
-
-			wpa_printf(MSG_DEBUG, "string after sprintf %s\n", strs);
+			sprintf(strs, "http://10.0.11.2:8080/idle");
+	
 			curl_easy_setopt(curl, CURLOPT_URL, strs);
 			/* Now specify the POST data */ 
 
+			struct curl_slist * headers = NULL;
+			headers = curl_slist_append(headers, "Content-Type: application/json");
+		
+			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);		
 
+			char * json = calloc(1000, sizeof(char));
+			// lets hope the username isnt massive
+			sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\", \"retransCount\" : %d }", MAC2STR(sm->peer_addr), (char*)sm->identity, sm->retransCount);
+			wpa_printf(MSG_DEBUG, "JSON: %s", (char*)json);
+			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
+			/* Perform the request, res will get the return code */ 
+			res = curl_easy_perform(curl);
+			curl_slist_free_all(headers);
+
+			curl_easy_setopt(curl, CURLOPT_URL, strs);
+
+			/* Now specify the POST data */ 
 			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
 			/* Perform the request, res will get the return code */ 
 			res = curl_easy_perform(curl);
@@ -352,6 +367,7 @@ SM_STATE(EAP, IDLE)
 			else{
 				wpa_printf(MSG_DEBUG, "curl post successful");
 			}
+			free(json);
 			free(strs);
 			/* always cleanup */
 			curl_easy_cleanup(curl);
@@ -1200,23 +1216,26 @@ SM_STATE(EAP, SUCCESS2)
 		// todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
 		char * strs = calloc(1000, sizeof(char));
 		memset(strs, 65, 999);
-		sprintf(strs, "http://10.0.11.2:8080/v1.0/authenticate/mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
-		//strcpy((char*)*(strs + 44), (sm->peer_addr));
-		//strcpy((char*)*(strs + 44 + 17), "&user=");
-		strcpy((char*)(strs + 44 + 17 + 6), (char*)sm->identity);
-//		strcpy((char*)(strs + 44 + 17 + 6 + sm->identity_len), "&abc=123");
-//		sprintf(strs, "http://10.0.11.2:8080/v1.0/authenticate/mac=" MACSTR "&user=%s&abc=123", MAC2STR(sm->peer_addr), (char*) sm->identity);
-		wpa_printf(MSG_DEBUG, "string after many strcpys %s\n", strs);
-		
+		sprintf(strs, "http://10.0.11.2:8080/authenticate");
+
 		curl_easy_setopt(curl, CURLOPT_URL, strs);
 		/* Now specify the POST data */ 
 
-		wpa_printf(MSG_DEBUG, "POST " MACSTR " User %s", MAC2STR(sm->peer_addr), sm->identity);
-		wpa_printf(MSG_DEBUG, "string after post %s\n", strs);
+		struct curl_slist * headers = NULL;
+		headers = curl_slist_append(headers, "Content-Type: application/json");
+		
+		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);		
 
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
+		wpa_printf(MSG_DEBUG, "POST " MACSTR " User %s", MAC2STR(sm->peer_addr), sm->identity);
+
+		char * json = calloc(1000, sizeof(char));
+
+		sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\" }", MAC2STR(sm->peer_addr), (char*)sm->identity);
+		wpa_printf(MSG_DEBUG, "JSON: %s", (char*)json);
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
 		/* Perform the request, res will get the return code */ 
 		res = curl_easy_perform(curl);
+		curl_slist_free_all(headers);
 		/* Check for errors */ 
 		if(res != CURLE_OK)
 			wpa_printf(MSG_ERROR, "curl_easy_perform() failed: %s\n",
@@ -1224,6 +1243,7 @@ SM_STATE(EAP, SUCCESS2)
 		else{
 			wpa_printf(MSG_DEBUG, "curl post successful");
 		}
+		free(json);
 		free(strs);
 		/* always cleanup */
 		curl_easy_cleanup(curl);
