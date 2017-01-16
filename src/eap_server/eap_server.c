@@ -1,4 +1,4 @@
-/*
+	/*
  * hostapd / EAP Full Authenticator state machine (RFC 4137)
  * Copyright (c) 2004-2014, Jouni Malinen <j@w1.fi>
  *
@@ -328,15 +328,20 @@ SM_STATE(EAP, IDLE)
 		/* get a curl handle */ 
 		curl = curl_easy_init();
 		if(curl) {
-			char * strs = calloc(1000, sizeof(char));
-			memset(strs, 65, 999);
-			sprintf(strs, "http://10.0.0.2:8080/idle");
+			/* First set the URL that is about to receive our POST. This URL can
+			   just as well be a https:// URL if that is what should receive the
+			   data. */ 
 
+			// todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
+			char * strs = malloc(1000);
+			sprintf(strs, "http://10.0.11.2:8080/idle");
+	
 			curl_easy_setopt(curl, CURLOPT_URL, strs);
 			/* Now specify the POST data */ 
 
 			struct curl_slist * headers = NULL;
 			headers = curl_slist_append(headers, "Content-Type: application/json");
+<<<<<<< HEAD
 
 			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);		
 			
@@ -372,6 +377,7 @@ SM_STATE(EAP, IDLE)
 			free(identity);
 
 			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
+
 			/* Perform the request, res will get the return code */ 
 			res = curl_easy_perform(curl);
 
@@ -1235,7 +1241,7 @@ SM_STATE(EAP, SUCCESS2)
 		char * strs = calloc(1000, sizeof(char));
 		memset(strs, 65, 999);
 		sprintf(strs, "http://10.0.0.2:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
-		
+
 		curl_easy_setopt(curl, CURLOPT_URL, strs);
 		/* Now specify the POST data */ 
 
@@ -1245,7 +1251,6 @@ SM_STATE(EAP, SUCCESS2)
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);		
 
 		wpa_printf(MSG_DEBUG, "POST " MACSTR " User %s", MAC2STR(sm->peer_addr), sm->identity);
-		//wpa_printf(MSG_DEBUG, "string after post %s\n", strs);
 
 		char * json = calloc(1000, sizeof(char));
 		u8 * identity = malloc(sm->identity_len+1);

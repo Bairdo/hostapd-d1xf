@@ -241,56 +241,57 @@ SM_STATE(AUTH_PAE, DISCONNECTED)
 
 			// todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
 			char * strs = malloc(1000);
-		sprintf(strs, "http://10.0.0.2:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
+			
+			sprintf(strs, "http://10.0.0.2:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
 
-		curl_easy_setopt(curl, CURLOPT_URL, strs);
-		/* Now specify the POST data */ 
+			curl_easy_setopt(curl, CURLOPT_URL, strs);
+			/* Now specify the POST data */ 
 
-		struct curl_slist * headers = NULL;
-		headers = curl_slist_append(headers, "Content-Type: application/json");
-		
-		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);		
-		curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-		wpa_printf(MSG_DEBUG, "POST " MACSTR " User %s", MAC2STR(sm->addr), sm->identity);
-		//wpa_printf(MSG_DEBUG, "string after post %s\n", strs);
+			struct curl_slist * headers = NULL;
+			headers = curl_slist_append(headers, "Content-Type: application/json");
 
-		char * json = calloc(1000, sizeof(char));
-		u8 * identity = malloc(sm->identity_len+1);
+			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);		
+			curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+			wpa_printf(MSG_DEBUG, "POST " MACSTR " User %s", MAC2STR(sm->addr), sm->identity);
+			//wpa_printf(MSG_DEBUG, "string after post %s\n", strs);
 
-		memcpy(identity, sm->identity, sm->identity_len);
-		
-		for (int i = 0; *(identity + i) != 0; i++){
-			if (*(identity + i) < ' '){
-				wpa_printf(MSG_ERROR, "Found unprintable character: 0x%02x in identity %s , truncating", *(identity + i), (char*) identity);
-				*(identity + i) = '\0';
-				
-			} else if (*(identity + i) == '\\'){
-				wpa_printf(MSG_ERROR, "Found a backslash in identity %s, this will not work when given to JSON", (char*) identity);
-			} else if (*(identity + i) == '\"'){
-				wpa_printf(MSG_ERROR, "Found a double quotation mark \" in identity %s, this will not work when given to JSON", (char*) identity);
+			char * json = calloc(1000, sizeof(char));
+			u8 * identity = malloc(sm->identity_len+1);
+
+			memcpy(identity, sm->identity, sm->identity_len);
+
+			for (int i = 0; *(identity + i) != 0; i++){
+				if (*(identity + i) < ' '){
+					wpa_printf(MSG_ERROR, "Found unprintable character: 0x%02x in identity %s , truncating", *(identity + i), (char*) identity);
+					*(identity + i) = '\0';
+
+				} else if (*(identity + i) == '\\'){
+					wpa_printf(MSG_ERROR, "Found a backslash in identity %s, this will not work when given to JSON", (char*) identity);
+				} else if (*(identity + i) == '\"'){
+					wpa_printf(MSG_ERROR, "Found a double quotation mark \" in identity %s, this will not work when given to JSON", (char*) identity);
+				}
 			}
-		}
-	
-		wpa_printf(MSG_DEBUG, "original identity: %s. identity after copy: %s", (char *) sm->identity, (char *) identity);
 
-	
-		sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\" }", MAC2STR(sm->addr), (char*)identity);
-		wpa_printf(MSG_DEBUG, "JSON: %s", (char*)json);
-		free(identity);
+			wpa_printf(MSG_DEBUG, "original identity: %s. identity after copy: %s", (char *) sm->identity, (char *) identity);
 
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
-		/* Perform the request, res will get the return code */ 
-		res = curl_easy_perform(curl);
 
-		curl_slist_free_all(headers);
-		/* Check for errors */ 
-		if(res != CURLE_OK)
-			wpa_printf(MSG_ERROR, "curl_easy_perform() failed: %s\n",
-				  curl_easy_strerror(res));
-		else{
-			wpa_printf(MSG_DEBUG, "curl post successful");
-		}
-		free(json);
+			sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\" }", MAC2STR(sm->addr), (char*)identity);
+			wpa_printf(MSG_DEBUG, "JSON: %s", (char*)json);
+			free(identity);
+
+			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
+			/* Perform the request, res will get the return code */ 
+			res = curl_easy_perform(curl);
+
+			curl_slist_free_all(headers);
+			/* Check for errors */ 
+			if(res != CURLE_OK)
+				wpa_printf(MSG_ERROR, "curl_easy_perform() failed: %s\n",
+						curl_easy_strerror(res));
+			else{
+				wpa_printf(MSG_DEBUG, "curl post successful");
+			}
+			free(json);
 
 			free(strs);
 			/* always cleanup */
