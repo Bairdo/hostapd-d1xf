@@ -341,7 +341,6 @@ SM_STATE(EAP, IDLE)
 
 			struct curl_slist * headers = NULL;
 			headers = curl_slist_append(headers, "Content-Type: application/json");
-<<<<<<< HEAD
 
 			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);		
 			
