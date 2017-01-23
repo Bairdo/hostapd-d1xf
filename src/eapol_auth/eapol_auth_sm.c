@@ -256,7 +256,7 @@ SM_STATE(AUTH_PAE, DISCONNECTED)
 			//wpa_printf(MSG_DEBUG, "string after post %s\n", strs);
 
 			char * json = calloc(1000, sizeof(char));
-			u8 * identity = malloc(sm->identity_len+1);
+			u8 * identity = calloc(sm->identity_len, sizeof(char));
 
 			memcpy(identity, sm->identity, sm->identity_len);
 

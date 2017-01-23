@@ -348,7 +348,7 @@ SM_STATE(EAP, IDLE)
 			//wpa_printf(MSG_DEBUG, "string after post %s\n", strs);
 
 			char * json = calloc(1000, sizeof(char));
-			u8 * identity = malloc(sm->identity_len+1);
+			u8 * identity = calloc(sm->identity_len, sizeof(char));
 			if (sm->identity != NULL){
 		
 				memcpy(identity, sm->identity, sm->identity_len);
@@ -1252,10 +1252,10 @@ SM_STATE(EAP, SUCCESS2)
 		wpa_printf(MSG_DEBUG, "POST " MACSTR " User %s", MAC2STR(sm->peer_addr), sm->identity);
 
 		char * json = calloc(1000, sizeof(char));
-		u8 * identity = malloc(sm->identity_len+1);
+		u8 * identity = calloc(sm->identity_len, sizeof(char));
 
 		memcpy(identity, sm->identity, sm->identity_len);
-		
+
 		for (int i = 0; *(identity + i) != 0; i++){
 			if (*(identity + i) < ' '){
 				wpa_printf(MSG_ERROR, "Found unprintable character: 0x%02x in identity %s , truncating", *(identity + i), (char*) identity);
