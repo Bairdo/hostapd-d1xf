@@ -227,7 +227,7 @@ SM_STATE(AUTH_PAE, DISCONNECTED)
 
 		// TODO MICHAEL possibly notify controller if retranscount greater than threshold, that we should switch to captive portal
 
-
+	}
 		CURL *curl;
 		CURLcode res;
 		/* In windows, this will init the winsock stuff */ 
@@ -252,14 +252,15 @@ SM_STATE(AUTH_PAE, DISCONNECTED)
 
 			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);		
 			curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-			wpa_printf(MSG_DEBUG, "POST " MACSTR " User %s", MAC2STR(sm->addr), sm->identity);
+			wpa_printf(MSG_DEBUG, "DELETE " MACSTR " User %s", MAC2STR(sm->addr), sm->identity);
 			//wpa_printf(MSG_DEBUG, "string after post %s\n", strs);
 
 			char * json = calloc(1000, sizeof(char));
-			u8 * identity = malloc(sm->identity_len+1);
-
-			memcpy(identity, sm->identity, sm->identity_len);
-
+			//u8 * identity = malloc(sm->identity_len+1);
+			u8* identity = escape_string(sm->identity, sm->identity_len);	
+			wpa_printf(MSG_DEBUG, "Identity after exacping %s", identity);
+//			memcpy(identity, sm->identity, sm->identity_len + 1);
+/*
 			for (int i = 0; *(identity + i) != 0; i++){
 				if (*(identity + i) < ' '){
 					wpa_printf(MSG_ERROR, "Found unprintable character: 0x%02x in identity %s , truncating", *(identity + i), (char*) identity);
@@ -272,13 +273,17 @@ SM_STATE(AUTH_PAE, DISCONNECTED)
 				}
 			}
 
+			
+*/			
+			wpa_printf(MSG_DEBUG, "Client %s, logoff - logging off - logout", identity);
 			wpa_printf(MSG_DEBUG, "original identity: %s. identity after copy: %s", (char *) sm->identity, (char *) identity);
 
 
 			sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\" }", MAC2STR(sm->addr), (char*)identity);
 			wpa_printf(MSG_DEBUG, "JSON: %s", (char*)json);
-			free(identity);
-
+			if (identity != sm->identity){
+//				free(identity);
+			}
 			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
 			/* Perform the request, res will get the return code */ 
 			res = curl_easy_perform(curl);
@@ -298,7 +303,7 @@ SM_STATE(AUTH_PAE, DISCONNECTED)
 			curl_easy_cleanup(curl);
 		}
 		curl_global_cleanup();
-	}
+	
 
 	SM_ENTRY_MA(AUTH_PAE, DISCONNECTED, auth_pae);
 

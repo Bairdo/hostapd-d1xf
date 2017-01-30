@@ -334,7 +334,7 @@ SM_STATE(EAP, IDLE)
 
 			// todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
 			char * strs = malloc(1000);
-			sprintf(strs, "http://10.0.11.2:8080/idle");
+			sprintf(strs, "http://10.0.0.2:8080/idle");
 	
 			curl_easy_setopt(curl, CURLOPT_URL, strs);
 			/* Now specify the POST data */ 
@@ -348,10 +348,12 @@ SM_STATE(EAP, IDLE)
 			//wpa_printf(MSG_DEBUG, "string after post %s\n", strs);
 
 			char * json = calloc(1000, sizeof(char));
-			u8 * identity = malloc(sm->identity_len+1);
+			//u8 * identity = calloc(sm->identity_len+1, sizeof (char));
+			u8* identity = escape_string(sm->identity, sm->identity_len);
+/*
 			if (sm->identity != NULL){
 		
-				memcpy(identity, sm->identity, sm->identity_len);
+				memcpy(identity, sm->identity, sm->identity_len+1);
 	
 				for (int i = 0; *(identity + i) != 0; i++){
 					if (*(identity + i) < ' '){
@@ -367,14 +369,15 @@ SM_STATE(EAP, IDLE)
 			}
 			else {
 				identity = sm->identity;
-			}
+			}*/
 			wpa_printf(MSG_DEBUG, "original identity: %s. identity after copy: %s", (char *) sm->identity, (char *) identity);
 
 
 			sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\", \"retrans\" : %d }", MAC2STR(sm->peer_addr), (char*)identity, sm->retransCount);
 			wpa_printf(MSG_DEBUG, "JSON: %s", (char*)json);
-			free(identity);
-
+			if (identity != sm->identity){
+			//	free(identity);
+			}
 			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
 
 			/* Perform the request, res will get the return code */ 
@@ -1237,10 +1240,11 @@ SM_STATE(EAP, SUCCESS2)
 		   data. */ 
 
 		// todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
-		char * strs = calloc(1000, sizeof(char));
-		memset(strs, 65, 999);
+		char * strs = calloc(44, sizeof(char));
+		//memset(strs, 65, 999);
 		sprintf(strs, "http://10.0.0.2:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
-
+		
+//		char * strs = "http://10.0.0.2:8080/authenticate/auth";
 		curl_easy_setopt(curl, CURLOPT_URL, strs);
 		/* Now specify the POST data */ 
 
@@ -1252,7 +1256,8 @@ SM_STATE(EAP, SUCCESS2)
 		wpa_printf(MSG_DEBUG, "POST " MACSTR " User %s", MAC2STR(sm->peer_addr), sm->identity);
 
 		char * json = calloc(1000, sizeof(char));
-		u8 * identity = malloc(sm->identity_len+1);
+		u8* identity = escape_string(sm->identity, sm->identity_len);
+/*		u8 * identity = calloc(sm->identity_len+1, sizeof( char));
 
 		memcpy(identity, sm->identity, sm->identity_len);
 		
@@ -1267,14 +1272,16 @@ SM_STATE(EAP, SUCCESS2)
 				wpa_printf(MSG_ERROR, "Found a double quotation mark \" in identity %s, this will not work when given to JSON", (char*) identity);
 			}
 		}
-	
+*/	
 		wpa_printf(MSG_DEBUG, "original identity: %s. identity after copy: %s", (char *) sm->identity, (char *) identity);
 
 	
 		sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\" }", MAC2STR(sm->peer_addr), (char*)identity);
 		wpa_printf(MSG_DEBUG, "JSON: %s", (char*)json);
-		free(identity);
-
+		if(identity != sm->identity){
+			free(identity);
+		}
+		wpa_printf(MSG_DEBUG, "just freed local identity memory, sm->identity is %s", sm->identity);
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
 		/* Perform the request, res will get the return code */ 
 		res = curl_easy_perform(curl);

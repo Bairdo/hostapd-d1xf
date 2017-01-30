@@ -556,4 +556,12 @@ void * __hide_aliasing_typecast(void *foo);
 #define WPA_MEM_DEFINED(ptr, len) do { } while (0)
 #endif /* CONFIG_VALGRIND */
 
+size_t extra_space(const u8 * s, int len);
+
+
+/**
+	if no escaping is needed returns the original string, otherwise returns a new string.
+*/
+u8 * escape_string(u8 * s, int len);
+
 #endif /* COMMON_H */

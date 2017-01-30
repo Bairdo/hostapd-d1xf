@@ -11,6 +11,120 @@
 #include "common/ieee802_11_defs.h"
 #include "common.h"
 
+/* these json escaping functions were heavily inspired by
+https://github.com/nlohmann/json/blob/ec7a1d834773f9fee90d8ae908a0c9933c5646fc/src/json.hpp#L4604-L4697
+ written in c++.
+*/
+
+size_t extra_space(const u8 * s, int len){
+	
+	size_t res = 0;
+	
+	int i = 0;	
+
+	for (;i < len; i++){
+		switch(*(s+i)){
+			case '"':
+			case '\\':
+			case '\b':
+			case '\f':
+			case '\n':
+			case '\r':
+			case '\t':
+			{
+				res += 1;
+				break;
+			}
+
+			default:
+			{
+				if (*(s+i) >- 0x00 && *(s+i) <= 0x1f){
+					res += 5;
+				}
+				break;
+			}
+
+		}
+		
+	}
+	wpa_printf(MSG_DEBUG, "result was %zu", res);
+	return res;
+}
+
+/**
+	if no escaping is needed returns the original string, otherwise returns a new string.
+*/
+u8 * escape_string(u8 * s, int len){
+	wpa_printf(MSG_DEBUG, "Escaping string %s", s);
+	size_t extra = extra_space(s, len);
+	if (extra == 0)
+	{
+		return s;
+	}
+	u8 * result = calloc(len + extra + 1, sizeof(u8));
+	size_t pos = 0;
+
+	int i = 0;
+	for (;i < len; i++){
+		//wpa_printf(MSG_DEBUG, "%c", *(s+i));
+		//wpa_printf(MSG_DEBUG, "%s", result);
+		switch (*(s+i))
+		{
+			case '"':
+				result[pos] = '\\';
+				result[pos+1] = '"';
+				pos += 2;
+				break;
+			case '\\':
+				result[pos] = '\\';
+				result[pos+1] = '\\';
+				pos += 2;
+				break;
+			case '\b':
+				result[pos] = '\\';
+				result[pos+1] = 'b';
+				pos += 2;
+				break;
+			case '\f':
+				result[pos] = '\\';
+				result[pos+1] = 'f';
+				pos += 2;
+				break;
+			case '\n':
+				result[pos] = '\\';
+				result[pos+1] = 'n';
+				pos += 2;
+				break;
+			case '\r':
+				result[pos] = '\\';
+				result[pos+1] = 'r';
+				pos += 2;
+				break;
+			case '\t':
+				result[pos] = '\\';
+				result[pos+1] = 't';
+				pos += 2;
+				break;
+			default:
+				if (*(s+i) >= 0x00 && *(s+i) <= 0x1f)
+				{
+					sprintf((char*)(result+pos), "\\u%04x", (int)(*(s+i)));
+					pos += 6;
+
+					result[pos] = '\\';
+				}
+				else
+				{
+					result[pos] = *(s+i);
+					pos++;
+				}
+				break;
+		}
+
+	}
+	return result;
+
+}
 
 static int hex2num(char c)
 {
