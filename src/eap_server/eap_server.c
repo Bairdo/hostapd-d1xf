@@ -39,7 +39,7 @@ static int eap_sm_calculateTimeout(struct eap_sm *sm, int retransCount,
 				   int methodTimeout);
 static void eap_sm_parseEapResp(struct eap_sm *sm, const struct wpabuf *resp);
 static int eap_sm_getId(const struct wpabuf *data);
-static struct wpabuf * eap_sm_build(struct eap_sm *sm, u8 id);
+static struct wpabuf * eap_sm_buildSuccess(struct eap_sm *sm, u8 id);
 static struct wpabuf * eap_sm_buildFailure(struct eap_sm *sm, u8 id);
 static int eap_sm_nextId(struct eap_sm *sm, int id);
 static void eap_sm_Policy_update(struct eap_sm *sm, const u8 *nak_list,
