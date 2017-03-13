@@ -766,7 +766,7 @@ SM_STATE(EAP, SUCCESS)
                 // todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
                 char * strs = calloc(44, sizeof(char));
                 //memset(strs, 65, 999);
-                sprintf(strs, "http://10.0.11.2:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
+                sprintf(strs, "http://10.0.0.2:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
 
 //              char * strs = "http://10.0.11.2:8080/authenticate/auth";
                 curl_easy_setopt(curl, CURLOPT_URL, strs);
