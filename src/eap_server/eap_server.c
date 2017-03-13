@@ -39,7 +39,7 @@ static int eap_sm_calculateTimeout(struct eap_sm *sm, int retransCount,
 				   int methodTimeout);
 static void eap_sm_parseEapResp(struct eap_sm *sm, const struct wpabuf *resp);
 static int eap_sm_getId(const struct wpabuf *data);
-static struct wpabuf * eap_sm_buildSuccess(struct eap_sm *sm, u8 id);
+static struct wpabuf * eap_sm_build(struct eap_sm *sm, u8 id);
 static struct wpabuf * eap_sm_buildFailure(struct eap_sm *sm, u8 id);
 static int eap_sm_nextId(struct eap_sm *sm, int id);
 static void eap_sm_Policy_update(struct eap_sm *sm, const u8 *nak_list,
@@ -752,6 +752,64 @@ SM_STATE(EAP, SUCCESS)
 		MACSTR, MAC2STR(sm->peer_addr));
 		
 	wpa_printf(MSG_DEBUG, "****** send success- message to sdn controller here?");
+	        CURL *curl;
+        CURLcode res;
+        /* In windows, this will init the winsock stuff */
+        curl_global_init(CURL_GLOBAL_ALL);
+        /* get a curl handle */
+        curl = curl_easy_init();
+        if(curl) {
+                /* First set the URL that is about to receive our POST. This URL can
+                   just as well be a https:// URL if that is what should receive the
+                   data. */
+
+                // todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
+                char * strs = calloc(44, sizeof(char));
+                //memset(strs, 65, 999);
+                sprintf(strs, "http://10.0.11.2:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
+
+//              char * strs = "http://10.0.11.2:8080/authenticate/auth";
+                curl_easy_setopt(curl, CURLOPT_URL, strs);
+                curl_easy_setopt(curl, CURLOPT_NOPROXY, "*");
+
+        /* Now specify the POST data */
+
+                struct curl_slist * headers = NULL;
+                headers = curl_slist_append(headers, "Content-Type: application/json");
+
+                curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+                wpa_printf(MSG_DEBUG, "POST " MACSTR " User %s", MAC2STR(sm->peer_addr), sm->identity);
+
+                char * json = calloc(1000, sizeof(char));
+                u8* identity = escape_string(sm->identity, sm->identity_len);
+                wpa_printf(MSG_DEBUG, "original identity: %s. identity after copy: %s", (char *) sm->identity, (char *) identity);
+
+                sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\" }", MAC2STR(sm->peer_addr), (char*)identity);
+                wpa_printf(MSG_DEBUG, "JSON: %s", (char*)json);
+                if(identity != sm->identity){
+                        free(identity);
+                }
+                wpa_printf(MSG_DEBUG, "just freed local identity memory, sm->identity is %s", sm->identity);
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
+                /* Perform the request, res will get the return code */
+                res = curl_easy_perform(curl);
+
+                curl_slist_free_all(headers);
+                /* Check for errors */
+                if(res != CURLE_OK)
+                        wpa_printf(MSG_ERROR, "curl_easy_perform() failed: %s\n",
+                                  curl_easy_strerror(res));
+                else{
+                        wpa_printf(MSG_DEBUG, "curl post successful");
+                }
+                free(json);
+                free(strs);
+                /* always cleanup */
+                curl_easy_cleanup(curl);
+        }
+        curl_global_cleanup();
+
 }
 
 
