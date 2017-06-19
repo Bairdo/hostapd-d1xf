@@ -764,7 +764,7 @@ SM_STATE(EAP, SUCCESS)
                    data. */
 
                 // todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
-                char * strs = calloc(44, sizeof(char));
+                char * strs = calloc(47, sizeof(char));
                 //memset(strs, 65, 999);
                 sprintf(strs, "http://10.0.0.2:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
 
@@ -1298,7 +1298,7 @@ SM_STATE(EAP, SUCCESS2)
 		   data. */ 
 
 		// todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
-		char * strs = calloc(44, sizeof(char));
+		char * strs = calloc(47, sizeof(char));
 		//memset(strs, 65, 999);
 		sprintf(strs, "http://10.0.0.2:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
 		
