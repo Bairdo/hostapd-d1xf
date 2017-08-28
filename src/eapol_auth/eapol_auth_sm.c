@@ -242,9 +242,10 @@ SM_STATE(AUTH_PAE, DISCONNECTED)
 			// todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
 			char * strs = malloc(1000);
 			
-			sprintf(strs, "http://10.0.0.2:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
+			sprintf(strs, "http://127.0.0.1:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
 
 			curl_easy_setopt(curl, CURLOPT_URL, strs);
+            curl_easy_setopt(curl, CURLOPT_NOPROXY, "*");
 			/* Now specify the POST data */ 
 
 			struct curl_slist * headers = NULL;
@@ -277,9 +278,13 @@ SM_STATE(AUTH_PAE, DISCONNECTED)
 */			
 			wpa_printf(MSG_DEBUG, "Client %s, logoff - logging off - logout", identity);
 			wpa_printf(MSG_DEBUG, "original identity: %s. identity after copy: %s", (char *) sm->identity, (char *) identity);
+            char * ifname;
 
+            struct hostapd_data * hapd = sm->msg_ctx;
+            if (hapd && hapd->iconf && hapd->iconf->bss && hapd->iconf->num_bss > 0 && hapd->iconf->bss[0])
+                ifname = hapd->iconf->bss[0]->iface;
 
-			sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\" }", MAC2STR(sm->addr), (char*)identity);
+			sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\", \"interface\" :\"%s\" }", MAC2STR(sm->addr), (char*)identity, ifname);
 			wpa_printf(MSG_DEBUG, "JSON: %s", (char*)json);
 			if (identity != sm->identity){
 //				free(identity);

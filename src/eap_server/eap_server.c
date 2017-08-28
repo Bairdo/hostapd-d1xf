@@ -19,7 +19,7 @@
 #include "eap_i.h"
 #include "state_machine.h"
 #include "common/wpa_ctrl.h"
-
+#include "ap/hostapd.h"
 #include <wchar.h>
 
 #include <curl/curl.h>
@@ -334,7 +334,7 @@ SM_STATE(EAP, IDLE)
 
 			// todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
 			char * strs = malloc(1000);
-			sprintf(strs, "http://10.0.0.2:8080/idle");
+			sprintf(strs, "http://127.0.0.1:8080/idle");
 	
 			curl_easy_setopt(curl, CURLOPT_URL, strs);
 			/* Now specify the POST data */ 
@@ -766,7 +766,7 @@ SM_STATE(EAP, SUCCESS)
                 // todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
                 char * strs = calloc(47, sizeof(char));
                 //memset(strs, 65, 999);
-                sprintf(strs, "http://10.0.0.2:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
+                sprintf(strs, "http://127.0.0.1:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
 
 //              char * strs = "http://10.0.11.2:8080/authenticate/auth";
                 curl_easy_setopt(curl, CURLOPT_URL, strs);
@@ -784,8 +784,13 @@ SM_STATE(EAP, SUCCESS)
                 char * json = calloc(1000, sizeof(char));
                 u8* identity = escape_string(sm->identity, sm->identity_len);
                 wpa_printf(MSG_DEBUG, "original identity: %s. identity after copy: %s", (char *) sm->identity, (char *) identity);
+                char * ifname;
+    
+                struct hostapd_data * hapd = sm->msg_ctx;
+                if (hapd && hapd->iconf && hapd->iconf->bss && hapd->iconf->num_bss > 0 && hapd->iconf->bss[0])
+                    ifname = hapd->iconf->bss[0]->iface;
 
-                sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\" }", MAC2STR(sm->peer_addr), (char*)identity);
+                sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\", \"interface\" : \"%s\" }", MAC2STR(sm->peer_addr), (char*)identity, ifname);
                 wpa_printf(MSG_DEBUG, "JSON: %s", (char*)json);
                 if(identity != sm->identity){
                         free(identity);
@@ -1300,9 +1305,9 @@ SM_STATE(EAP, SUCCESS2)
 		// todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
 		char * strs = calloc(47, sizeof(char));
 		//memset(strs, 65, 999);
-		sprintf(strs, "http://10.0.0.2:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
+		sprintf(strs, "http://127.0.0.1:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
 		
-//		char * strs = "http://10.0.0.2:8080/authenticate/auth";
+//		char * strs = "http://127.0.0.1:8080/authenticate/auth";
 		curl_easy_setopt(curl, CURLOPT_URL, strs);
 		/* Now specify the POST data */ 
 
