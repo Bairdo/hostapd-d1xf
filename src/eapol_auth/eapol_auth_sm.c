@@ -18,6 +18,8 @@
 #include "eapol_auth_sm.h"
 #include "eapol_auth_sm_i.h"
 
+#include "eap_server/eap_i.h"
+#include "ap/hostapd.h"
 #include <curl/curl.h>
 
 #define STATE_MACHINE_DATA struct eapol_state_machine
@@ -280,7 +282,7 @@ SM_STATE(AUTH_PAE, DISCONNECTED)
 			wpa_printf(MSG_DEBUG, "original identity: %s. identity after copy: %s", (char *) sm->identity, (char *) identity);
             char * ifname;
 
-            struct hostapd_data * hapd = sm->msg_ctx;
+            struct hostapd_data * hapd = sm->eap->msg_ctx;
             if (hapd && hapd->iconf && hapd->iconf->bss && hapd->iconf->num_bss > 0 && hapd->iconf->bss[0])
                 ifname = hapd->iconf->bss[0]->iface;
 
