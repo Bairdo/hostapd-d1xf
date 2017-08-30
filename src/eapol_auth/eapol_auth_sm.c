@@ -289,7 +289,7 @@ SM_STATE(AUTH_PAE, DISCONNECTED)
 			sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\", \"interface\" :\"%s\" }", MAC2STR(sm->addr), (char*)identity, ifname);
 			wpa_printf(MSG_DEBUG, "JSON: %s", (char*)json);
 			if (identity != sm->identity){
-//				free(identity);
+				free(identity);
 			}
 			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
 			/* Perform the request, res will get the return code */ 

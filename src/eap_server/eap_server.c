@@ -376,7 +376,7 @@ SM_STATE(EAP, IDLE)
 			sprintf(json, "{\"mac\" : \"" MACSTR "\", \"user\" : \"%s\", \"retrans\" : %d }", MAC2STR(sm->peer_addr), (char*)identity, sm->retransCount);
 			wpa_printf(MSG_DEBUG, "JSON: %s", (char*)json);
 			if (identity != sm->identity){
-			//	free(identity);
+				free(identity);
 			}
 			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
 
@@ -763,12 +763,9 @@ SM_STATE(EAP, SUCCESS)
                    just as well be a https:// URL if that is what should receive the
                    data. */
 
-                // todo - no idea why curl doesnt want to use the "curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");" below to urlencode. but this seems to work.
                 char * strs = calloc(47, sizeof(char));
-                //memset(strs, 65, 999);
-                sprintf(strs, "http://127.0.0.1:8080/authenticate/auth"); //mac=" MACSTR "&user=", MAC2STR(sm->peer_addr));
+                sprintf(strs, "http://127.0.0.1:8080/authenticate/auth");
 
-//              char * strs = "http://10.0.11.2:8080/authenticate/auth";
                 curl_easy_setopt(curl, CURLOPT_URL, strs);
                 curl_easy_setopt(curl, CURLOPT_NOPROXY, "*");
 
@@ -781,7 +778,7 @@ SM_STATE(EAP, SUCCESS)
 
                 wpa_printf(MSG_DEBUG, "POST " MACSTR " User %s", MAC2STR(sm->peer_addr), sm->identity);
 
-                char * json = calloc(1000, sizeof(char));
+                char * json = calloc(1000, sizeof(char)); // TODO should be length of the resulting json str. 42 + len(identity) + len(iface) + 17 (macstr)
                 u8* identity = escape_string(sm->identity, sm->identity_len);
                 wpa_printf(MSG_DEBUG, "original identity: %s. identity after copy: %s", (char *) sm->identity, (char *) identity);
                 char * ifname;
