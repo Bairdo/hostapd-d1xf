@@ -17,6 +17,7 @@
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "eap_server/eap.h"
+#include "eap_server/eap_i.h"
 #include "eap_common/eap_wsc_common.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "eapol_auth/eapol_auth_sm_i.h"
@@ -2638,7 +2639,7 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 				   wpa_auth_sta_key_mgmt(sta->wpa_sm))) ?
 			  1 : 2,
 			  (unsigned int) diff.sec,
-			  sm->identity);
+			  sm->eap->identity);
 	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
