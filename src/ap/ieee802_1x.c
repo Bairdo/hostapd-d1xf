@@ -2633,13 +2633,13 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			  "dot1xAuthSessionAuthenticMethod=%d\n"
 			  "dot1xAuthSessionTime=%u\n"
 			  "dot1xAuthSessionTerminateCause=999\n"
-			  "dot1xAuthSessionUserName=%s\n",
+			  "dot1xAuthSessionUserName=%.*s\n",
 			  (unsigned long long) sta->acct_session_id,
 			  (wpa_key_mgmt_wpa_ieee8021x(
 				   wpa_auth_sta_key_mgmt(sta->wpa_sm))) ?
 			  1 : 2,
 			  (unsigned int) diff.sec,
-			  sm->eap->identity);
+			  sm->eap->identity_len, sm->eap->identity);
 	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
