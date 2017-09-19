@@ -1136,6 +1136,10 @@ SM_STATE(EAP, SUCCESS2)
 	 * started properly.
 	 */
 	sm->start_reauth = TRUE;
+
+	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_SUCCESS2
+		MACSTR, MAC2STR(sm->peer_addr));
+
 }
 
 
