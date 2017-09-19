@@ -52,6 +52,7 @@ extern "C" {
 #define WPA_EVENT_EAP_STATUS "CTRL-EVENT-EAP-STATUS "
 /** EAP authentication completed successfully */
 #define WPA_EVENT_EAP_SUCCESS "CTRL-EVENT-EAP-SUCCESS "
+#define WPA_EVENT_EAP_SUCCESS2 "CTRL-EVENT-EAP-SUCCESS2 "
 /** EAP authentication failed (EAP-Failure received) */
 #define WPA_EVENT_EAP_FAILURE "CTRL-EVENT-EAP-FAILURE "
 /** Network block temporarily disabled (e.g., due to authentication failure) */
