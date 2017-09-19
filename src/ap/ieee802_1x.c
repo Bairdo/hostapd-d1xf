@@ -2639,7 +2639,7 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 				   wpa_auth_sta_key_mgmt(sta->wpa_sm))) ?
 			  1 : 2,
 			  (unsigned int) diff.sec,
-			  sm->eap->identity_len, sm->eap->identity);
+			  (int) sm->eap->identity_len, sm->eap->identity);
 	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
