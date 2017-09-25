@@ -159,7 +159,9 @@ struct sta_info {
 
 	char *identity; /* User-Name from RADIUS */
 	char *radius_cui; /* Chargeable-User-Identity from RADIUS */
-
+#ifdef CONFIG_STORE_ACCESS_ACCEPT_ATTR
+	struct hostapd_radius_attr *radius_access_accept_attr;
+#endif /* CONFIG_STORE_ACCESS_ACCEPT_ATTR */
 	struct ieee80211_ht_capabilities *ht_capabilities;
 	struct ieee80211_vht_capabilities *vht_capabilities;
 	u8 vht_opmode;
