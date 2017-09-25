@@ -1386,6 +1386,72 @@ static void ieee802_1x_get_keys(struct hostapd_data *hapd,
 	}
 }
 
+#ifdef CONFIG_STORE_ACCESS_ACCEPT_ATTR
+static void stored_radius_msg_free(struct hostapd_radius_attr* attr)
+{
+	struct hostapd_radius_attr* a;
+	if (attr == NULL)
+		return;
+
+	do {
+		a = attr->next;
+		os_free(attr);
+		attr = a;
+	} while (a != NULL);
+}
+
+static int save_radius_attr(struct hostapd_data *hapd, u8 type, unsigned char * buf)
+{
+	struct hostapd_bss_config *bss;
+	bss = hapd->conf;
+	struct hostapd_radius_attr * attr;
+
+	for (attr = bss->radius_auth_access_accept_attr; attr != NULL; attr = attr->next) {
+		if (attr->type == type) {
+			if (type != RADIUS_ATTR_VENDOR_SPECIFIC ||
+				(type == RADIUS_ATTR_VENDOR_SPECIFIC &&
+				 (*(attr->val->buf) == 0 ||
+				  *(buf + 4)  == *(attr->val->buf)))) // the first 4 bytes are the vendor id.
+				return 1;
+		}
+	}
+	return 0;
+}
+
+static void ieee802_1x_store_radius_attr(struct hostapd_data *hapd,
+					  struct sta_info *sta,
+					  struct radius_msg *msg)
+{
+	struct hostapd_radius_attr *attr;
+	struct radius_attr_hdr *attr_hdr;
+	int len;
+	unsigned char *pos;
+	size_t i;
+
+	for (i = 0; i < msg->attr_used; i++) {
+		attr_hdr = radius_get_attr_hdr(msg, i);
+
+		pos = (unsigned char *) (attr_hdr + 1);
+
+		if (save_radius_attr(hapd, attr_hdr->type, pos)) { // possibly need the 1st byte of the buffer if type is vendor specific.
+			attr = os_zalloc(sizeof(*attr));
+			if (attr == NULL)
+				return;
+
+			len = attr_hdr->length - sizeof(struct radius_attr_hdr);
+
+			attr->type = attr_hdr->type;
+			attr->val = wpabuf_alloc_copy(pos, len);
+
+			if (sta->radius_access_accept_attr != NULL) {
+				attr->next = sta->radius_access_accept_attr;
+			}
+
+			sta->radius_access_accept_attr = attr;
+		}
+	}
+}
+#endif /* CONFIG_STORE_ACCESS_ACCEPT_ATTR */
 
 static void ieee802_1x_store_radius_class(struct hostapd_data *hapd,
 					  struct sta_info *sta,
@@ -1738,6 +1804,11 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	radius_msg_free(sm->last_recv_radius);
 	sm->last_recv_radius = msg;
 
+#ifdef CONFIG_STORE_ACCESS_ACCEPT_ATTR
+	stored_radius_msg_free(sta->radius_access_accept_attr);
+	sta->radius_access_accept_attr = NULL;
+#endif /* CONFIG_STORE_ACCESS_ACCEPT_ATTR */
+
 	session_timeout_set =
 		!radius_msg_get_attr_int32(msg, RADIUS_ATTR_SESSION_TIMEOUT,
 					   &session_timeout);
@@ -1829,6 +1900,9 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 		override_eapReq = 1;
 		ieee802_1x_get_keys(hapd, sta, msg, req, shared_secret,
 				    shared_secret_len);
+#ifdef CONFIG_STORE_ACCESS_ACCEPT_ATTR
+		ieee802_1x_store_radius_attr(hapd, sta, msg);
+#endif /* CONFIG_STORE_ACCESS_ACCEPT_ATTR */
 		ieee802_1x_store_radius_class(hapd, sta, msg);
 		ieee802_1x_update_sta_identity(hapd, sta, msg);
 		ieee802_1x_update_sta_cui(hapd, sta, msg);
