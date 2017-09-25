@@ -19,6 +19,7 @@
 #include "drivers/driver.h"
 #include "eap_server/eap.h"
 #include "radius/radius_client.h"
+#include "radius/radius.h"
 #include "ap/wpa_auth.h"
 #include "ap/ap_config.h"
 #include "config_file.h"
@@ -625,6 +626,74 @@ hostapd_parse_radius_attr(const char *value)
 	return attr;
 }
 
+#ifdef CONFIG_STORE_ACCESS_ACCEPT_ATTR
+static struct hostapd_radius_attr *
+hostapd_parse_radius_accept_attr(const char *value)
+{
+	const char *pos;
+	char syntax;
+	struct hostapd_radius_attr * attr;
+	attr = os_zalloc(sizeof(*attr));
+	if (attr == NULL)
+		return NULL;
+
+	attr->type = atoi(value);
+	pos = os_strchr(value, ':');
+
+	if (pos == NULL) {
+		attr->val = wpabuf_alloc(1);
+		if (attr->val == NULL) {
+			os_free(attr);
+			return NULL;
+		}
+		wpabuf_put_u8(attr->val, 0);
+		return attr;
+	}
+	if (attr->type != RADIUS_ATTR_VENDOR_SPECIFIC) {
+		// non vendor specific does not have a subtype or syntax (datatype).
+		attr->val = wpabuf_alloc(1);
+		if (attr->val == NULL) {
+			os_free(attr);
+			return NULL;
+		}
+		wpabuf_put_u8(attr->val, 0);
+		return attr;
+	}
+
+	pos++;
+	// we can have a subtype and a datatype (syntax)
+
+	if (pos[0] == '\0' || pos[1] != ':') {
+	// the subtype/datatype is optional.
+		attr->val = wpabuf_alloc(1);
+		if (attr->val == NULL) {
+			os_free(attr);
+			return NULL;
+		}
+		wpabuf_put_u8(attr->val, 0);
+		return attr;
+	}
+	// first byte subtype. second byte syntax.
+	attr->val = wpabuf_alloc(3);
+	if (attr->val == NULL) {
+		os_free(attr);
+		return NULL;
+	}
+	u8 subtype = atoi(pos);
+	pos = os_strchr(pos, ':');
+
+	syntax = pos[1];
+	char * subtype_syntax = os_malloc(2);
+	subtype_syntax[0] = subtype;
+	subtype_syntax[1] = syntax;
+	wpabuf_put_data(attr->val, subtype_syntax, 2);
+
+	wpa_printf(MSG_DEBUG,
+		   "successfully allocated access_accept_attr");
+	return attr;
+
+}
+#endif /* CONFIG_STORE_ACCESS_ACCEPT_ATTR */
 
 static int hostapd_parse_das_client(struct hostapd_bss_config *bss, char *val)
 {
@@ -2522,6 +2591,24 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		   0) {
 		bss->radius_das_require_message_authenticator = atoi(pos);
 #endif /* CONFIG_NO_RADIUS */
+#ifdef CONFIG_STORE_ACCESS_ACCEPT_ATTR
+    } else if (os_strcmp(buf, "radius_auth_access_accept_attr") == 0) {
+        struct hostapd_radius_attr *attr, *a;
+        attr = hostapd_parse_radius_accept_attr(pos);
+        if (attr == NULL) {
+            wpa_printf(MSG_ERROR,
+                       "Line %d: invalid radius_auth_access_accept_attr",
+                       line);
+            return 1;
+        } else if (bss->radius_auth_access_accept_attr == NULL) {
+            bss->radius_auth_access_accept_attr = attr;
+        } else {
+            a = bss->radius_auth_access_accept_attr;
+            while (a->next)
+                a = a->next;
+            a->next = attr;
+        }
+#endif /* CONFIG_STORE_ACCESS_ACCEPT_ATTR */
 	} else if (os_strcmp(buf, "auth_algs") == 0) {
 		bss->auth_algs = atoi(pos);
 		if (bss->auth_algs == 0) {
