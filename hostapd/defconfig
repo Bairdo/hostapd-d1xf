@@ -372,3 +372,6 @@ CONFIG_IPV6=y
 # Opportunistic Wireless Encryption (OWE)
 # Experimental implementation of draft-harkins-owe-07.txt
 #CONFIG_OWE=y
+
+# Store RADIUS Attributes from Access-Accept messages with station.
+#CONFIG_STORE_ACCESS_ACCEPT_ATTR=y
