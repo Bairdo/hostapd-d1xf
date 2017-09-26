@@ -2583,6 +2583,15 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 	struct os_reltime diff;
 	const char *name1;
 	const char *name2;
+#ifdef CONFIG_STORE_ACCESS_ACCEPT_ATTR
+	char buffer[1000];
+	struct wpabuf * pos;
+	struct in_addr addr;
+#ifdef CONFIG_IPV6
+	const char *atxt;
+	struct in6_addr *addrv6;
+#endif /* CONFIG_IPV6 */
+#endif /* CONFIG_STORE_ACCESS_ACCEPT_ATTR */
 
 	if (sm == NULL)
 		return 0;
@@ -2739,6 +2748,90 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 		return len;
 	len += ret;
 
+#ifdef CONFIG_STORE_ACCESS_ACCEPT_ATTR
+	if (sta->radius_access_accept_attr){
+		struct hostapd_radius_attr *attr;
+
+		for (attr = sta->radius_access_accept_attr; attr != NULL; attr = attr->next) {
+			// get attribute // done.
+			// get typename
+
+			const struct radius_attr_type *attr_type = radius_get_attr_type(attr->type);
+			if (attr_type->type != RADIUS_ATTR_VENDOR_SPECIFIC) {
+				wpa_printf(MSG_DEBUG, "there is an non vendor specific attribute %u", attr_type->data_type);
+				pos = attr->val;
+
+				switch(attr_type->data_type){
+				case RADIUS_ATTR_TEXT:
+
+					ret = os_snprintf(buf + len, buflen - len,
+							  "AccessAccept:%s=%s\n",
+							  attr_type->name,
+							  pos->buf);
+					if (os_snprintf_error(buflen - len, ret))
+						return len;
+					len += ret;
+					continue;
+				case RADIUS_ATTR_IP:
+					os_memcpy(&addr, pos->buf, 4);
+					ret = os_snprintf(buf + len, buflen - len,
+							  "AccessAccept:%s=%s\n",
+							  attr_type->name,
+							  inet_ntoa(addr));
+					if (os_snprintf_error(buflen - len, ret))
+						return len;
+					len += ret;
+					continue;
+#ifdef CONFIG_IPV6
+				case RADIUS_ATTR_IPV6:
+					addrv6 = (struct in6_addr *) pos->buf;
+					atxt = inet_ntop(AF_INET6, addrv6, buffer, sizeof(buffer));
+					ret = os_snprintf(buf + len, buflen - len,
+								  "AccessAccept:%s=%s\n",
+								  attr_type->name,
+								  atxt ? atxt: "?");
+					if (os_snprintf_error(buflen - len, ret))
+						return len;
+					len += ret;
+					continue;
+#endif /* CONFIG_IPV6 */
+				case RADIUS_ATTR_HEXDUMP:
+				case RADIUS_ATTR_UNDIST:
+					wpa_snprintf_hex(buffer, sizeof(buffer), pos->buf, attr->val->used);
+					ret = os_snprintf(buf + len, buflen - len,
+								  "AccessAccept:%s=%s\n",
+								  attr_type->name,
+								  buffer);
+					if (os_snprintf_error(buflen - len, ret))
+						return len;
+					len += ret;
+					continue;
+				case RADIUS_ATTR_INT32:
+					ret = os_snprintf(buf + len, buflen - len,
+								  "AccessAccept:%s=%u\n",
+							      attr_type->name,
+							      WPA_GET_BE32(pos->buf));
+					if (os_snprintf_error(buflen - len, ret))
+						return len;
+					len += ret;
+					continue;
+				default:
+					continue;
+			    }
+			}
+// if not Vendor-Specific
+//     find out how to printf it (datatype)
+//     snprintf
+//     continue
+// if Vendor-Specific
+//
+//"AccessAcceptReply-Message=This is a reply message."
+//"AccessAcceptVendor-Specific=<vendor-id>,subtype,syntax,length,<attribute>
+//
+// TODO what happens with strings with newline characters?
+		}
+	}
+#endif /* CONFIG_STORE_ACCESS_ACCEPT_ATTR */
 	return len;
 }
 
