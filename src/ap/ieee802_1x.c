@@ -2574,6 +2574,32 @@ int ieee802_1x_get_mib(struct hostapd_data *hapd, char *buf, size_t buflen)
 	return 0;
 }
 
+#ifdef CONFIG_STORE_ACCESS_ACCEPT_ATTR
+static int get_radius_attr_syntax_from_conf(struct hostapd_radius_attr *conf_attr,
+					     struct wpabuf *buf)
+{
+	struct hostapd_radius_attr *a;
+	for (a = conf_attr; a != NULL; a = a->next){
+        // first 4 bytes of buf->buf are vendor id, then vendor type.
+        // a->val->buf[0] is vendor_type
+		if (a->type == RADIUS_ATTR_VENDOR_SPECIFIC && (*(a->val->buf) == 0 || *(a->val->buf) == *(buf->buf+4))) {
+			u8 * syntax = (a->val->buf + 1); // first byte is vendor_type. then the syntax
+			switch(*syntax){
+			case 's':
+				return RADIUS_ATTR_TEXT;
+			case 'd':
+				return RADIUS_ATTR_INT32;
+			case 'x':
+				return RADIUS_ATTR_HEXDUMP;
+			case 0:
+			default:
+				return RADIUS_ATTR_UNDIST;
+			}
+		}
+	}
+	return 0;
+}
+#endif /* CONFIG_STORE_ACCESS_ACCEPT_ATTR */
 
 int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			   char *buf, size_t buflen)
@@ -2587,6 +2613,9 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 	char buffer[1000];
 	struct wpabuf * pos;
 	struct in_addr addr;
+	int vendor_datatype = 0;
+	u8 vendor_type;
+	u8 * vendor_data;
 #ifdef CONFIG_IPV6
 	const char *atxt;
 	struct in6_addr *addrv6;
@@ -2758,7 +2787,6 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 
 			const struct radius_attr_type *attr_type = radius_get_attr_type(attr->type);
 			if (attr_type->type != RADIUS_ATTR_VENDOR_SPECIFIC) {
-				wpa_printf(MSG_DEBUG, "there is an non vendor specific attribute %u", attr_type->data_type);
 				pos = attr->val;
 
 				switch(attr_type->data_type){
@@ -2819,15 +2847,71 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 					continue;
 			    }
 			}
-// if not Vendor-Specific
-//     find out how to printf it (datatype)
-//     snprintf
-//     continue
-// if Vendor-Specific
-//
-//"AccessAcceptReply-Message=This is a reply message."
-//"AccessAcceptVendor-Specific=<vendor-id>,subtype,syntax,length,<attribute>
-//
+            else {
+                // find the syntax from inside the sta->radius_access_accept_attr
+
+				pos = attr->val;
+				vendor_datatype = get_radius_attr_syntax_from_conf(hapd->conf->radius_auth_access_accept_attr, pos);
+				vendor_type = (char) *(pos->buf + 4);
+				wpa_printf(MSG_DEBUG, "vendor datatype %d", vendor_datatype);
+				vendor_data = pos->buf + 6;
+				switch(vendor_datatype){
+				case RADIUS_ATTR_TEXT:
+					ret = os_snprintf(buf + len, buflen - len,
+							  "AccessAccept:Vendor-Specific:%u=%s\n",
+							  vendor_type,
+							  vendor_data);
+					if (os_snprintf_error(buflen - len, ret))
+						return len;
+					len += ret;
+					continue;
+				case RADIUS_ATTR_IP:
+					os_memcpy(&addr, vendor_data, 4);
+					ret = os_snprintf(buf + len, buflen - len,
+							  "AccessAccept:Vendor-Specific:%u=%s\n",
+							  vendor_type,
+							  inet_ntoa(addr));
+					if (os_snprintf_error(buflen - len, ret))
+						return len;
+					len += ret;
+					continue;
+#ifdef CONFIG_IPV6
+				case RADIUS_ATTR_IPV6:
+					addrv6 = (struct in6_addr *) vendor_data;
+					atxt = inet_ntop(AF_INET6, addrv6, buffer, sizeof(buffer));
+					ret = os_snprintf(buf + len, buflen - len,
+								  "AccessAccept:Vendor-Specific:%u=%s\n",
+								  vendor_type,
+								  atxt ? atxt: "?");
+					if (os_snprintf_error(buflen - len, ret))
+						return len;
+					len += ret;
+					continue;
+#endif /* CONFIG_IPV6 */
+				case RADIUS_ATTR_HEXDUMP:
+				case RADIUS_ATTR_UNDIST:
+					wpa_snprintf_hex(buffer, sizeof(buffer), vendor_data, attr->val->used-6);
+					ret = os_snprintf(buf + len, buflen - len,
+								  "AccessAccept:Vendor-Specific:%u=%s\n",
+								  vendor_type,
+								  buffer);
+					if (os_snprintf_error(buflen - len, ret))
+						return len;
+					len += ret;
+					continue;
+				case RADIUS_ATTR_INT32:
+					ret = os_snprintf(buf + len, buflen - len,
+								  "AccessAccept:Vendor-Specific:%u=%u\n",
+							      vendor_type,
+							      WPA_GET_BE32(vendor_data));
+					if (os_snprintf_error(buflen - len, ret))
+						return len;
+					len += ret;
+					continue;
+				default:
+					continue;
+			    }
+			}
 // TODO what happens with strings with newline characters?
 		}
 	}
