@@ -2589,7 +2589,7 @@ static int get_radius_attr_syntax_from_conf(struct hostapd_radius_attr *conf_att
 	for (a = conf_attr; a != NULL; a = a->next){
         // first 4 bytes of buf->buf are vendor id, then vendor type.
         // a->val->buf[0] is vendor_type
-		if (a->type == RADIUS_ATTR_VENDOR_SPECIFIC && (*(a->val->buf) == 0 || *(a->val->buf) == *(buf->buf+4))) {
+		if (a->type == RADIUS_ATTR_VENDOR_SPECIFIC && (*(a->val->buf + 4) == 0 || *(a->val->buf+4) == *(buf->buf+4))) {
 			u8 * syntax = (a->val->buf + 5); // first 4 bytes are Vendor-Id, 5th byte is vendor_type. then the syntax
 			switch(*syntax){
 			case 's':
@@ -2861,8 +2861,8 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 				pos = attr->val;
 				vendor_datatype = get_radius_attr_syntax_from_conf(hapd->conf->radius_auth_access_accept_attr, pos);
 				vendor_type = (char) *(pos->buf + 4);
-				wpa_printf(MSG_DEBUG, "vendor datatype %d", vendor_datatype);
 				os_memcpy(&vendor_id, pos->buf, sizeof(int));
+				vendor_id = ntohl(vendor_id);
 				vendor_data = pos->buf + 6;
 				switch(vendor_datatype){
 				case RADIUS_ATTR_TEXT:
