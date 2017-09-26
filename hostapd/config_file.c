@@ -650,7 +650,7 @@ hostapd_parse_radius_accept_attr(const char *value)
 		return attr;
 	}
 	if (attr->type != RADIUS_ATTR_VENDOR_SPECIFIC) {
-		// non vendor specific does not have a subtype or syntax (datatype).
+		// non vendor specific does not have a Vendor type or syntax (datatype).
 		attr->val = wpabuf_alloc(1);
 		if (attr->val == NULL) {
 			os_free(attr);
@@ -662,32 +662,32 @@ hostapd_parse_radius_accept_attr(const char *value)
 
 	pos++;
 
-	// first byte subtype. second byte syntax.
-	attr->val = wpabuf_alloc(3);
+	// first four bytes Vendor-Id, 5th byte Vendor type. 6th byte syntax.
+	attr->val = wpabuf_alloc(7);
 	if (attr->val == NULL) {
 		os_free(attr);
 		return NULL;
 	}
 
-	char * subtype_syntax = os_malloc(2);
-	if (pos[0] == '\0' || pos[1] != ':') { 
-		// the subtype/datatype is optional.
-		subtype_syntax[0] = 0;
-		subtype_syntax[1] = 0;
-	} else {
-		u8 subtype = atoi(pos);
+	char * v_id_subtype_syntax = os_zalloc(6);
+	if (pos[0] != '\0') {
+		uint32_t vendor_id = atoi(pos);
+		os_memcpy(v_id_subtype_syntax, &vendor_id, 4);
+
 		pos = os_strchr(pos, ':');
+		if (pos != NULL && pos[0] != '\0') {
+			pos++;
+			u8 subtype = atoi(pos);
 
-		syntax = pos[1];
-		subtype_syntax[0] = subtype;
-		subtype_syntax[1] = syntax;
+			pos = os_strchr(pos, ':');
+			syntax = pos[1];
+
+			v_id_subtype_syntax[4] = subtype;
+			v_id_subtype_syntax[5] = syntax;
+		}
 	}
-	wpabuf_put_data(attr->val, subtype_syntax, 2);
-
-	wpa_printf(MSG_DEBUG,
-		   "successfully allocated access_accept_attr");
+	wpabuf_put_data(attr->val, v_id_subtype_syntax, 6);
 	return attr;
-
 }
 #endif /* CONFIG_STORE_ACCESS_ACCEPT_ATTR */
 

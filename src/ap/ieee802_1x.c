@@ -1400,19 +1400,24 @@ static void stored_radius_msg_free(struct hostapd_radius_attr* attr)
 	} while (a != NULL);
 }
 
-static int save_radius_attr(struct hostapd_data *hapd, u8 type, unsigned char * buf)
+static int save_radius_attr(struct hostapd_data *hapd,  u8 type, unsigned char * buf, uint32_t vendor_id)
 {
 	struct hostapd_bss_config *bss;
 	bss = hapd->conf;
 	struct hostapd_radius_attr * attr;
-
 	for (attr = bss->radius_auth_access_accept_attr; attr != NULL; attr = attr->next) {
 		if (attr->type == type) {
-			if (type != RADIUS_ATTR_VENDOR_SPECIFIC ||
-				(type == RADIUS_ATTR_VENDOR_SPECIFIC &&
-				 (*(attr->val->buf) == 0 ||
-				  *(buf + 4)  == *(attr->val->buf)))) // the first 4 bytes are the vendor id.
-				return 1;
+			if (type != RADIUS_ATTR_VENDOR_SPECIFIC){
+				return 1;}
+            uint32_t v;
+            os_memcpy(&v, attr->val->buf, 4);
+			if (vendor_id == 0){
+				return 1;}
+			if (vendor_id == v){
+                if((*(attr->val->buf + 4) == 0 ||
+				 *(buf + 4)  == *(attr->val->buf + 4))){
+				// the first 4 bytes are the vendor id. 5th is vendor type. (in both cases)
+				return 1;}}
 		}
 	}
 	return 0;
@@ -1427,13 +1432,15 @@ static void ieee802_1x_store_radius_attr(struct hostapd_data *hapd,
 	int len;
 	unsigned char *pos;
 	size_t i;
+    uint32_t vendor_id = 0;
 
 	for (i = 0; i < msg->attr_used; i++) {
 		attr_hdr = radius_get_attr_hdr(msg, i);
 
 		pos = (unsigned char *) (attr_hdr + 1);
-
-		if (save_radius_attr(hapd, attr_hdr->type, pos)) { // possibly need the 1st byte of the buffer if type is vendor specific.
+        os_memcpy(&vendor_id, pos, 4);
+        vendor_id = ntohl(vendor_id);
+		if (save_radius_attr(hapd, attr_hdr->type, pos, vendor_id)) { // possibly need the 1st byte of the buffer if type is vendor specific.
 			attr = os_zalloc(sizeof(*attr));
 			if (attr == NULL)
 				return;
@@ -2583,7 +2590,7 @@ static int get_radius_attr_syntax_from_conf(struct hostapd_radius_attr *conf_att
         // first 4 bytes of buf->buf are vendor id, then vendor type.
         // a->val->buf[0] is vendor_type
 		if (a->type == RADIUS_ATTR_VENDOR_SPECIFIC && (*(a->val->buf) == 0 || *(a->val->buf) == *(buf->buf+4))) {
-			u8 * syntax = (a->val->buf + 1); // first byte is vendor_type. then the syntax
+			u8 * syntax = (a->val->buf + 5); // first 4 bytes are Vendor-Id, 5th byte is vendor_type. then the syntax
 			switch(*syntax){
 			case 's':
 				return RADIUS_ATTR_TEXT;
@@ -2616,6 +2623,7 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 	int vendor_datatype = 0;
 	u8 vendor_type;
 	u8 * vendor_data;
+	int vendor_id = 0;
 #ifdef CONFIG_IPV6
 	const char *atxt;
 	struct in6_addr *addrv6;
@@ -2854,11 +2862,13 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 				vendor_datatype = get_radius_attr_syntax_from_conf(hapd->conf->radius_auth_access_accept_attr, pos);
 				vendor_type = (char) *(pos->buf + 4);
 				wpa_printf(MSG_DEBUG, "vendor datatype %d", vendor_datatype);
+				os_memcpy(&vendor_id, pos->buf, sizeof(int));
 				vendor_data = pos->buf + 6;
 				switch(vendor_datatype){
 				case RADIUS_ATTR_TEXT:
 					ret = os_snprintf(buf + len, buflen - len,
-							  "AccessAccept:Vendor-Specific:%u=%s\n",
+							  "AccessAccept:Vendor-Specific:%u:%u=%s\n",
+							  vendor_id,
 							  vendor_type,
 							  vendor_data);
 					if (os_snprintf_error(buflen - len, ret))
@@ -2868,7 +2878,8 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 				case RADIUS_ATTR_IP:
 					os_memcpy(&addr, vendor_data, 4);
 					ret = os_snprintf(buf + len, buflen - len,
-							  "AccessAccept:Vendor-Specific:%u=%s\n",
+							  "AccessAccept:Vendor-Specific:%u:%u=%s\n",
+							  vendor_id,
 							  vendor_type,
 							  inet_ntoa(addr));
 					if (os_snprintf_error(buflen - len, ret))
@@ -2880,7 +2891,8 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 					addrv6 = (struct in6_addr *) vendor_data;
 					atxt = inet_ntop(AF_INET6, addrv6, buffer, sizeof(buffer));
 					ret = os_snprintf(buf + len, buflen - len,
-								  "AccessAccept:Vendor-Specific:%u=%s\n",
+								  "AccessAccept:Vendor-Specific:%u:%u=%s\n",
+								  vendor_id,
 								  vendor_type,
 								  atxt ? atxt: "?");
 					if (os_snprintf_error(buflen - len, ret))
@@ -2892,7 +2904,8 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 				case RADIUS_ATTR_UNDIST:
 					wpa_snprintf_hex(buffer, sizeof(buffer), vendor_data, attr->val->used-6);
 					ret = os_snprintf(buf + len, buflen - len,
-								  "AccessAccept:Vendor-Specific:%u=%s\n",
+								  "AccessAccept:Vendor-Specific:%u:%u=%s\n",
+								  vendor_id,
 								  vendor_type,
 								  buffer);
 					if (os_snprintf_error(buflen - len, ret))
@@ -2901,7 +2914,8 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 					continue;
 				case RADIUS_ATTR_INT32:
 					ret = os_snprintf(buf + len, buflen - len,
-								  "AccessAccept:Vendor-Specific:%u=%u\n",
+								  "AccessAccept:Vendor-Specific:%u:%u=%u\n",
+								  vendor_id,
 							      vendor_type,
 							      WPA_GET_BE32(vendor_data));
 					if (os_snprintf_error(buflen - len, ret))
