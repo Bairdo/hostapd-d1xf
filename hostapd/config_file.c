@@ -661,31 +661,27 @@ hostapd_parse_radius_accept_attr(const char *value)
 	}
 
 	pos++;
-	// we can have a subtype and a datatype (syntax)
 
-	if (pos[0] == '\0' || pos[1] != ':') {
-	// the subtype/datatype is optional.
-		attr->val = wpabuf_alloc(1);
-		if (attr->val == NULL) {
-			os_free(attr);
-			return NULL;
-		}
-		wpabuf_put_u8(attr->val, 0);
-		return attr;
-	}
 	// first byte subtype. second byte syntax.
 	attr->val = wpabuf_alloc(3);
 	if (attr->val == NULL) {
 		os_free(attr);
 		return NULL;
 	}
-	u8 subtype = atoi(pos);
-	pos = os_strchr(pos, ':');
 
-	syntax = pos[1];
 	char * subtype_syntax = os_malloc(2);
-	subtype_syntax[0] = subtype;
-	subtype_syntax[1] = syntax;
+	if (pos[0] == '\0' || pos[1] != ':') { 
+		// the subtype/datatype is optional.
+		subtype_syntax[0] = 0;
+		subtype_syntax[1] = 0;
+	} else {
+		u8 subtype = atoi(pos);
+		pos = os_strchr(pos, ':');
+
+		syntax = pos[1];
+		subtype_syntax[0] = subtype;
+		subtype_syntax[1] = syntax;
+	}
 	wpabuf_put_data(attr->val, subtype_syntax, 2);
 
 	wpa_printf(MSG_DEBUG,
