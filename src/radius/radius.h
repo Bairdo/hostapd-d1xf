@@ -46,6 +46,16 @@ struct radius_attr_hdr {
 	/* followed by length-2 octets of attribute value */
 } STRUCT_PACKED;
 
+
+struct radius_attr_type {
+	u8 type;
+	char *name;
+	enum {
+		RADIUS_ATTR_UNDIST, RADIUS_ATTR_TEXT, RADIUS_ATTR_IP,
+		RADIUS_ATTR_HEXDUMP, RADIUS_ATTR_INT32, RADIUS_ATTR_IPV6
+	} data_type;
+};
+
 #define RADIUS_MAX_ATTR_LEN (255 - sizeof(struct radius_attr_hdr))
 
 enum { RADIUS_ATTR_USER_NAME = 1,
@@ -258,6 +268,7 @@ struct radius_hdr * radius_msg_get_hdr(struct radius_msg *msg);
 struct wpabuf * radius_msg_get_buf(struct radius_msg *msg);
 struct radius_attr_hdr * radius_get_attr_hdr(struct radius_msg *msg, int idx);
 struct radius_msg * radius_msg_new(u8 code, u8 identifier);
+const struct radius_attr_type *radius_get_attr_type(u8 type);
 void radius_msg_free(struct radius_msg *msg);
 void radius_msg_dump(struct radius_msg *msg);
 int radius_msg_finish(struct radius_msg *msg, const u8 *secret,
