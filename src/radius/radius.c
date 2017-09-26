@@ -126,15 +126,6 @@ static const char *radius_code_string(u8 code)
 }
 
 
-struct radius_attr_type {
-	u8 type;
-	char *name;
-	enum {
-		RADIUS_ATTR_UNDIST, RADIUS_ATTR_TEXT, RADIUS_ATTR_IP,
-		RADIUS_ATTR_HEXDUMP, RADIUS_ATTR_INT32, RADIUS_ATTR_IPV6
-	} data_type;
-};
-
 static const struct radius_attr_type radius_attrs[] =
 {
 	{ RADIUS_ATTR_USER_NAME, "User-Name", RADIUS_ATTR_TEXT },
@@ -230,7 +221,7 @@ static const struct radius_attr_type radius_attrs[] =
 #define RADIUS_ATTRS ARRAY_SIZE(radius_attrs)
 
 
-static const struct radius_attr_type *radius_get_attr_type(u8 type)
+const struct radius_attr_type *radius_get_attr_type(u8 type)
 {
 	size_t i;
 
