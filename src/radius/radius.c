@@ -15,38 +15,6 @@
 #include "radius.h"
 
 
-/**
- * struct radius_msg - RADIUS message structure for new and parsed messages
- */
-struct radius_msg {
-	/**
-	 * buf - Allocated buffer for RADIUS message
-	 */
-	struct wpabuf *buf;
-
-	/**
-	 * hdr - Pointer to the RADIUS header in buf
-	 */
-	struct radius_hdr *hdr;
-
-	/**
-	 * attr_pos - Array of indexes to attributes
-	 *
-	 * The values are number of bytes from buf to the beginning of
-	 * struct radius_attr_hdr.
-	 */
-	size_t *attr_pos;
-
-	/**
-	 * attr_size - Total size of the attribute pointer array
-	 */
-	size_t attr_size;
-
-	/**
-	 * attr_used - Total number of attributes in the array
-	 */
-	size_t attr_used;
-};
 
 
 struct radius_hdr * radius_msg_get_hdr(struct radius_msg *msg)
@@ -61,7 +29,7 @@ struct wpabuf * radius_msg_get_buf(struct radius_msg *msg)
 }
 
 
-static struct radius_attr_hdr *
+struct radius_attr_hdr *
 radius_get_attr_hdr(struct radius_msg *msg, int idx)
 {
 	return (struct radius_attr_hdr *)
@@ -158,15 +126,6 @@ static const char *radius_code_string(u8 code)
 }
 
 
-struct radius_attr_type {
-	u8 type;
-	char *name;
-	enum {
-		RADIUS_ATTR_UNDIST, RADIUS_ATTR_TEXT, RADIUS_ATTR_IP,
-		RADIUS_ATTR_HEXDUMP, RADIUS_ATTR_INT32, RADIUS_ATTR_IPV6
-	} data_type;
-};
-
 static const struct radius_attr_type radius_attrs[] =
 {
 	{ RADIUS_ATTR_USER_NAME, "User-Name", RADIUS_ATTR_TEXT },
@@ -262,7 +221,7 @@ static const struct radius_attr_type radius_attrs[] =
 #define RADIUS_ATTRS ARRAY_SIZE(radius_attrs)
 
 
-static const struct radius_attr_type *radius_get_attr_type(u8 type)
+const struct radius_attr_type *radius_get_attr_type(u8 type)
 {
 	size_t i;
 
